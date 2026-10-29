@@ -120,8 +120,12 @@ stops if the tag doesn't match. Never run `npm publish` by hand, and
 ask before you tag a release.
 
 A release runs the workflow as it stood at the tagged commit, so a
-fix to the workflow needs a new commit and a new tag. npm may hold a
-publish until the maintainer approves it with 2FA.
+fix to the workflow needs a new commit and a new tag.
+
+npm trusts `publish.yml` by name through trusted publishing, so no
+npm token is stored anywhere. Renaming the file breaks publishing
+until the trusted publisher on npmjs.com is renamed to match. Don't
+add a token back.
 
 `files` in `package.json` ships only `comment-blocks.js`; npm adds
 the README, LICENSE and `package.json`. Check `npm publish --dry-run`
