@@ -258,6 +258,48 @@ test("the env passed to render reaches the component", () => {
   assert.equal(calls[0].env, env);
 });
 
+// ---- Rule order -------------------------------------------------------
+
+test("escapes and entities inside a block render as text", () => {
+  const { calls, components } = recorder();
+  const source = [
+    "<!-- block:box -->",
+    "",
+    "\\*not emphasis\\* &copy;",
+    "",
+    "<!-- /block:box -->",
+  ].join("\n");
+
+  render(source, components);
+
+  assert.equal(calls[0].html, "<p>*not emphasis* ©</p>\n");
+});
+
+test("the typographer reaches text inside a block", () => {
+  const { calls, components } = recorder();
+  const md = new MarkdownIt({ html: true, typographer: true });
+
+  md.use(commentBlocks, { components });
+  md.render('<!-- block:box -->\n\n"quoted" (c)\n\n<!-- /block:box -->');
+
+  assert.equal(calls[0].html, "<p>“quoted” ©</p>\n");
+});
+
+test("a core rule added first sees the tokens inside a block", () => {
+  const { components } = recorder();
+  const md = new MarkdownIt({ html: true });
+  const types = [];
+
+  md.core.ruler.push("spy", (state) => {
+    types.push(...state.tokens.map((token) => token.type));
+  });
+
+  md.use(commentBlocks, { components });
+  md.render("<!-- block:box -->\n\n# Title\n\n<!-- /block:box -->");
+
+  assert.ok(types.includes("heading_open"));
+});
+
 // ---- Namespaces -------------------------------------------------------
 
 test("a custom namespace replaces the default", () => {
