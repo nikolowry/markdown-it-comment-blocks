@@ -52,7 +52,9 @@ jobs:
                   test "v$(node -p 'require("./package.json").version')"
                   = "$GITHUB_REF_NAME"
 
+            #  npm won't attach provenance to a new package without
+            #  --access public, even an unscoped one.
             - name: Publish
-              run: npm publish --provenance
+              run: npm publish --provenance --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_PAT }}
