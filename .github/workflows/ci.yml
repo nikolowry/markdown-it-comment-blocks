@@ -3,7 +3,7 @@
 #  =====================================================================
 #  Every push to main and every pull request: the tests on each Node
 #  release the package claims, against the markdown-it the lockfile
-#  pins and again against 14.0.0, the oldest the peer range allows.
+#  pins and again against 14.3.3, the oldest the peer range allows.
 #  The peer range is a promise; this is what keeps it.
 #
 #  Actions are pinned to full commit SHAs.
@@ -43,7 +43,7 @@ jobs:
             - name: Test
               run: npm test
 
-            - name: Test against markdown-it 14.0.0
+            - name: Test against markdown-it 14.3.3
               run: >-
-                  npm install --no-save markdown-it@14.0.0 &&
+                  npm install --no-save markdown-it@14.3.3 &&
                   npm test
