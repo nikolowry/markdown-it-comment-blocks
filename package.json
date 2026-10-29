@@ -1,0 +1,36 @@
+{
+  "name": "markdown-it-comment-blocks",
+  "version": "0.1.0",
+  "description": "Turn HTML comments into components; Markdown stays plain",
+  "keywords": [
+    "markdown-it",
+    "markdown-it-plugin",
+    "markdown",
+    "comments",
+    "components",
+    "eleventy"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikolowry/markdown-it-comment-blocks.git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "Niko Lowry (https://github.com/nikolowry)",
+  "type": "module",
+  "exports": "./comment-blocks.js",
+  "files": [
+    "comment-blocks.js"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "peerDependencies": {
+    "markdown-it": "^14.0.0 || ^15.0.0"
+  },
+  "devDependencies": {
+    "markdown-it": "15.0.3"
+  }
+}
