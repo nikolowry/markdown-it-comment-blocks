@@ -325,7 +325,10 @@ export default function commentBlocks(md, options = {}) {
   const components = options.components ?? {};
   const patterns = buildPatterns(namespace);
 
-  md.core.ruler.after("inline", TOKEN_TYPE, (state) => {
+  // Last in the core chain, so markdown-it's own rules reach a block's
+  // tokens before they move into it. Run any sooner and `text_join`
+  // misses them, so an escape such as `\*` renders as `<>`.
+  md.core.ruler.push(TOKEN_TYPE, (state) => {
     checkHtml(state.md);
     collapseBlocks(state, patterns, components);
   });
