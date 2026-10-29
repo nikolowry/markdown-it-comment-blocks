@@ -1,0 +1,58 @@
+#  =====================================================================
+#  Publish
+#  =====================================================================
+#  Publishing a GitHub release runs the tests, checks that the tag
+#  matches the version in package.json, and publishes that commit to
+#  npm with provenance, which links the package back to this run.
+#
+#  The NPM_PAT secret signs in for now. npm can only trust a workflow
+#  for a package that already exists, so the first release needs the
+#  token. Once npm trusts this file, the token goes away.
+#
+#  Actions are pinned to full commit SHAs.
+
+name: publish
+
+on:
+    release:
+        types: [published]
+
+permissions:
+    contents: read
+    id-token: write
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+
+        steps:
+            #  actions/checkout v7.0.1
+            - name: Check out
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+            #  actions/setup-node v7.1.0
+            - name: Set up Node
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+              with:
+                  node-version: 24
+                  registry-url: https://registry.npmjs.org
+
+            #  Trusted publishing needs npm 11.5.1 or later.
+            - name: Show npm's version
+              run: npm --version
+
+            - name: Install
+              run: npm ci
+
+            - name: Test
+              run: npm test
+
+            - name: Check the tag matches package.json
+              run: >-
+                  test "v$(node -p 'require("./package.json").version')"
+                  = "$GITHUB_REF_NAME"
+
+            - name: Publish
+              run: npm publish --provenance
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_PAT }}
