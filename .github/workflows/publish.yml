@@ -5,9 +5,11 @@
 #  matches the version in package.json, and publishes that commit to
 #  npm with provenance, which links the package back to this run.
 #
-#  The NPM_PAT secret signs in for now. npm can only trust a workflow
-#  for a package that already exists, so the first release needs the
-#  token. Once npm trusts this file, the token goes away.
+#  npm trusts this file by name through trusted publishing, so no
+#  token is stored anywhere. GitHub hands the run a short-lived OIDC
+#  token, which is why the job needs id-token: write. Renaming this
+#  file breaks publishing until the trusted publisher on npmjs.com is
+#  renamed to match.
 #
 #  Actions are pinned to full commit SHAs.
 
@@ -36,6 +38,8 @@ jobs:
               with:
                   node-version: 24
                   registry-url: https://registry.npmjs.org
+                  #  A release build never trusts a cache.
+                  package-manager-cache: false
 
             #  Trusted publishing needs npm 11.5.1 or later.
             - name: Show npm's version
@@ -52,9 +56,5 @@ jobs:
                   test "v$(node -p 'require("./package.json").version')"
                   = "$GITHUB_REF_NAME"
 
-            #  npm won't attach provenance to a new package without
-            #  --access public, even an unscoped one.
             - name: Publish
-              run: npm publish --provenance --access public
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_PAT }}
+              run: npm publish --provenance
