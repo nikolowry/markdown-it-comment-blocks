@@ -75,7 +75,7 @@ function buildPatterns(namespace) {
 
   return {
     namespace,
-    ours:new RegExp(`^<!--\\s*\\/?${ns}:`),
+    ours: new RegExp(`^<!--\\s*\\/?${ns}:`),
     open: new RegExp(
       `^<!--\\s*${ns}:(${NAME})(?:\\s+(\\{[\\s\\S]*\\}))?\\s*(\\/)?-->$`,
     ),
