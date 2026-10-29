@@ -113,8 +113,15 @@ reading level. A change in behavior also updates the README.
 
 ##  Releases
 
-The maintainer publishes. Never run `npm publish`, and ask before you
-tag a release.
+Publishing a GitHub release runs `.github/workflows/publish.yml`,
+which tests the tagged commit and publishes it to npm with
+provenance. Bump `version` in `package.json` first; the workflow
+stops if the tag doesn't match. Never run `npm publish` by hand, and
+ask before you tag a release.
+
+A release runs the workflow as it stood at the tagged commit, so a
+fix to the workflow needs a new commit and a new tag. npm may hold a
+publish until the maintainer approves it with 2FA.
 
 `files` in `package.json` ships only `comment-blocks.js`; npm adds
 the README, LICENSE and `package.json`. Check `npm publish --dry-run`
