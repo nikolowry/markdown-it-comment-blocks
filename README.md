@@ -228,6 +228,29 @@ md.render(source, { page: { inputPath: "docs/models.md" } });
 
 Without it, the message starts with `line 5:` instead.
 
+##  With other plugins
+
+When you call `md.use`, the plugin adds its rule to the end of
+markdown-it's core chain. That rule collapses each block into one
+`comment_block` token and moves the tokens inside it to the token's
+`meta.children`.
+
+So order matters for plugins that walk the token list, such as one
+that adds IDs to headings. Use those first, and they see every token,
+inside a block or not:
+
+```js
+md.use(headingIds); // any plugin that walks the tokens
+md.use(commentBlocks, { components });
+```
+
+A plugin used after this one sees each block as a single token. If it
+walks the tokens, it must also walk `meta.children`.
+
+Renderer rules need nothing extra. The plugin renders a block's
+tokens with the same renderer, so a custom `link_open` rule still
+applies inside a block.
+
 ##  Develop
 
 ```bash
