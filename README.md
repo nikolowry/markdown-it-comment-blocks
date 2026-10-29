@@ -32,7 +32,10 @@ draws its report charts from Markdown tables this way.
 npm install markdown-it markdown-it-comment-blocks
 ```
 
-It needs Node 22 or later and markdown-it 14 or 15.
+It needs Node 22 or later, and markdown-it 14.3.3 or 15.0.3 or later
+in either line. Those are the first releases with every published
+security fix; one of the fixed flaws is in parsing inline HTML, which
+this plugin needs turned on.
 
 ##  Use
 
