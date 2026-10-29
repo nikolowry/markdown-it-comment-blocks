@@ -53,10 +53,14 @@ don't add a lenient mode or a warning that lets the build go on.
 template engine. The README's "The block" section is the contract for
 what a component receives.
 
-**It runs as a core rule after `inline`.** Each block collapses into
-one `comment_block` token, and the inner tokens move to
-`meta.children`. Any plugin that walks `state.tokens` must also look
-in `meta.children`, or it misses everything inside a block.
+**It runs as the last core rule**, pushed when `md.use` is called.
+Each block collapses into one `comment_block` token, and the inner
+tokens move to `meta.children`. markdown-it's own core rules must
+reach those tokens first. When the rule ran right after `inline`,
+`text_join` missed them, and an escape inside a block rendered as
+`<>`. A plugin used after this one that walks `state.tokens` must
+also look in `meta.children`. The README's "With other plugins"
+section is the public side of this.
 
 ##  Dependencies
 
