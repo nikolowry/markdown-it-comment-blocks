@@ -112,12 +112,15 @@ function readTag(token, patterns, env) {
     return null;
   }
 
+  // A token's map is 0-based and its end is exclusive, so the end is
+  // already the 1-based number of the comment's last line.
   const line = token.map ? token.map[0] + 1 : 0;
+  const endLine = token.map ? token.map[1] : 0;
   const level = token.level;
   const close = text.match(patterns.close);
 
   if (close) {
-    return { kind: "close", name: close[1], line, level };
+    return { kind: "close", name: close[1], line, endLine, level };
   }
 
   const open = text.match(patterns.open);
@@ -134,7 +137,7 @@ function readTag(token, patterns, env) {
   const options = parseOptions(json, name, line, env);
   const kind = slash ? "void" : "open";
 
-  return { kind, name, options, line, level };
+  return { kind, name, options, line, endLine, level };
 }
 
 // ---- Tables -----------------------------------------------------------
@@ -218,7 +221,9 @@ function readTable(tokens, renderInline) {
 
 // ---- Parsing ----------------------------------------------------------
 
-function blockToken(state, tag, children) {
+// `endLine` is the last line of the closing comment, or of the
+// comment itself for a block with no content.
+function blockToken(state, tag, children, endLine) {
   const token = new state.Token(TOKEN_TYPE, "", 0);
 
   token.block = true;
@@ -227,6 +232,7 @@ function blockToken(state, tag, children) {
     name: tag.name,
     options: tag.options,
     line: tag.line,
+    endLine,
     children,
   };
 
@@ -290,14 +296,16 @@ function collapseBlocks(state, patterns, components) {
     if (tag.kind === "close") {
       checkClose(top.tag, tag, env);
       stack.pop();
-      stack.at(-1).tokens.push(blockToken(state, top.tag, top.tokens));
+      stack.at(-1).tokens.push(
+        blockToken(state, top.tag, top.tokens, tag.endLine),
+      );
       continue;
     }
 
     checkComponent(components, tag, env);
 
     if (tag.kind === "void") {
-      top.tokens.push(blockToken(state, tag, []));
+      top.tokens.push(blockToken(state, tag, [], tag.endLine));
       continue;
     }
 
@@ -348,4 +356,52 @@ export default function commentBlocks(md, options = {}) {
       table: readTable(children, renderInline),
     });
   };
+}
+
+// ---- Reading blocks ---------------------------------------------------
+
+// Every block among the tokens, in source order. A block inside a list
+// item or quote is still among them; a block inside another block
+// lives in that block's `meta.children` and is read there.
+function collectBlocks(tokens, renderInline) {
+  const blocks = [];
+
+  for (const token of tokens) {
+    if (token.type !== TOKEN_TYPE) {
+      continue;
+    }
+
+    const { name, options, line, endLine, children } = token.meta;
+
+    blocks.push({
+      name,
+      options,
+      line,
+      endLine,
+      table: readTable(children, renderInline),
+      blocks: collectBlocks(children, renderInline),
+    });
+  }
+
+  return blocks;
+}
+
+// Reads a file's blocks without rendering them, the way WordPress's
+// parse_blocks() does. Linters, tests and agent tools can use it to
+// check a file or read its data before a build. It parses with the
+// same rule the build uses, so it throws the same CommentBlockError.
+export function parseBlocks(md, source, env = {}) {
+  if (!md.renderer.rules[TOKEN_TYPE]) {
+    throw new Error(
+      "parseBlocks needs a markdown-it instance that already uses " +
+        "this plugin; call md.use(commentBlocks, { components }) first",
+    );
+  }
+
+  const tokens = md.parse(source, env);
+  const renderInline = (inline) => {
+    return md.renderer.renderInline(inline, md.options, env);
+  };
+
+  return collectBlocks(tokens, renderInline);
 }
