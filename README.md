@@ -189,6 +189,40 @@ the block's `table` is:
 block, not to the one around it. A row with fewer cells than columns
 gets empty strings for the rest.
 
+##  Reading blocks
+
+`parseBlocks` reads a file's blocks without rendering them. It plays
+the role `parse_blocks()` plays in WordPress. Use it to lint a file,
+test its data or let a tool read it before a build.
+
+```js
+import MarkdownIt from "markdown-it";
+import commentBlocks, { parseBlocks } from "markdown-it-comment-blocks";
+
+const md = new MarkdownIt({ html: true });
+
+md.use(commentBlocks, { components });
+
+const blocks = parseBlocks(md, source, env);
+```
+
+Pass the same `md` the build uses, with the plugin already in it.
+`env` is optional. No component runs. Each block in the list holds:
+
+| Field | Holds |
+| --- | --- |
+| `name` | The component's name |
+| `options` | The parsed options, or `{}` |
+| `line` | The opening comment's first line, counting from 1 |
+| `endLine` | The closing comment's last line, counting from 1 |
+| `table` | The first table directly inside, or `null`, as in "The block" |
+| `blocks` | The blocks directly inside, in the same shape |
+
+The list is in source order. A block inside a list item or quote is
+in it too. For a block with no content, `endLine` is its own last
+line. `parseBlocks` uses the build's own rule, so a mistake
+throws the same `CommentBlockError` the build would.
+
 ##  Errors
 
 The plugin doesn't guess. A mistake throws a `CommentBlockError`,
