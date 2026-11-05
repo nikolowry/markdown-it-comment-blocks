@@ -3,7 +3,10 @@ import { test } from "node:test";
 
 import MarkdownIt from "markdown-it";
 
-import commentBlocks, { CommentBlockError } from "./comment-blocks.js";
+import commentBlocks, {
+  CommentBlockError,
+  parseBlocks,
+} from "./comment-blocks.js";
 
 // ---- Constants --------------------------------------------------------
 
@@ -323,6 +326,110 @@ test("a namespace is matched literally, not as a pattern", () => {
   assert.equal(calls.length, 1);
 });
 
+// ---- Reading blocks ---------------------------------------------------
+
+function parse(source, components, env = {}) {
+  const md = new MarkdownIt({ html: true });
+
+  md.use(commentBlocks, { components });
+
+  return parseBlocks(md, source, env);
+}
+
+test("parseBlocks reads a block's name, options, lines and table", () => {
+  const { calls, components } = recorder();
+  const source = [
+    "intro",
+    "",
+    '<!-- block:chart {"value": "Score"} -->',
+    "",
+    TABLE,
+    "",
+    "<!-- /block:chart -->",
+  ].join("\n");
+
+  const [block, ...rest] = parse(source, components);
+
+  assert.equal(rest.length, 0);
+  assert.equal(calls.length, 0);
+  assert.equal(block.name, "chart");
+  assert.deepEqual(block.options, { value: "Score" });
+  assert.equal(block.line, 3);
+  assert.equal(block.endLine, 10);
+  assert.deepEqual(block.table.columns, ["Model", "Score"]);
+  assert.deepEqual(block.table.rows[0], { Model: "Qwen", Score: "23/24" });
+  assert.deepEqual(block.blocks, []);
+});
+
+test("parseBlocks gives a block's rendered table cells too", () => {
+  const { components } = recorder();
+  const source = [
+    "<!-- block:chart -->",
+    "| Task | Why |",
+    "| ---- | --- |",
+    "| html | `<b>` |",
+    "<!-- /block:chart -->",
+  ].join("\n");
+
+  const [block] = parse(source, components);
+
+  assert.deepEqual(block.table.htmlRows, [
+    { Task: "html", Why: "<code>&lt;b&gt;</code>" },
+  ]);
+});
+
+test("parseBlocks ends a multi-line void block on its last line", () => {
+  const { components } = recorder();
+  const source = '<!-- block:list {\n  "a": 1\n} /-->';
+
+  const [block] = parse(source, components);
+
+  assert.equal(block.line, 1);
+  assert.equal(block.endLine, 3);
+  assert.equal(block.table, null);
+});
+
+test("parseBlocks nests inner blocks and keeps source order", () => {
+  const { components } = recorder();
+  const source = [
+    "<!-- block:box -->",
+    "",
+    "<!-- block:list /-->",
+    "",
+    "<!-- block:chart -->",
+    "",
+    TABLE,
+    "",
+    "<!-- /block:chart -->",
+    "",
+    "<!-- /block:box -->",
+    "",
+    "- item",
+    "",
+    "  <!-- block:list /-->",
+  ].join("\n");
+
+  const blocks = parse(source, components);
+
+  assert.deepEqual(
+    blocks.map((block) => block.name),
+    ["box", "list"],
+  );
+  assert.equal(blocks[0].table, null);
+  assert.deepEqual(
+    blocks[0].blocks.map((block) => block.name),
+    ["list", "chart"],
+  );
+  assert.equal(blocks[0].blocks[1].table.rows.length, 2);
+  assert.equal(blocks[1].line, 18);
+});
+
+test("parseBlocks returns an empty list for a file with no blocks", () => {
+  const { components } = recorder();
+
+  assert.deepEqual(parse("# Title\n\n<!-- a note -->", components), []);
+});
+
 // ---- Mistakes ---------------------------------------------------------
 
 function assertFails(source, pattern, env) {
@@ -409,4 +516,24 @@ test("markdown-it without html fails, instead of printing comments", () => {
   md.use(commentBlocks, { components });
 
   assert.throws(() => md.render("<!-- block:list /-->"), /`html` option/);
+});
+
+test("parseBlocks throws the same errors as a build", () => {
+  const { components } = recorder();
+  const env = { page: { inputPath: "reports/x.md" } };
+
+  assert.throws(() => parse("<!-- block:nope /-->", components, env), (e) => {
+    assert.ok(e instanceof CommentBlockError);
+    assert.match(e.message, /^reports\/x\.md:1: unknown component/);
+    return true;
+  });
+});
+
+test("parseBlocks fails on markdown-it without the plugin", () => {
+  const md = new MarkdownIt({ html: true });
+
+  assert.throws(
+    () => parseBlocks(md, "<!-- block:list /-->"),
+    /call md\.use\(commentBlocks/,
+  );
 });
